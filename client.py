@@ -14,9 +14,48 @@ from shell_builtins import builtInCommands
 from input_handler import parser
 from pipeline import dual_pipelining, multi_pipelining
 from redirection import parse_redirection, handle_stdout_redirect, handle_stderr_redirect
+from colors import prompt_text, error_text, BOLD, RESET, colored_text, THEME
+
+
+# Commands whose output should be colorized as file listings
+LS_COMMANDS = {"ls", "dir", "ls.exe", "dir.exe"}
+
+
+def colorize_ls_output(output, cwd):
+    result = []
+    for line in output.splitlines():
+        words = line.split()
+        colored_words = []
+        for word in words:
+            
+            clean = word.rstrip("/\\*@|")
+            check_path = os.path.join(cwd, clean)
+            try:
+                if os.path.isdir(check_path):
+                    colored_words.append(f"{BOLD}{THEME.blue}{word}{RESET}")
+                elif os.path.isfile(check_path) and os.access(check_path, os.X_OK):
+                    colored_words.append(f"{THEME.green}{word}{RESET}")
+                elif os.path.islink(check_path):
+                    colored_words.append(f"{THEME.cyan}{word}{RESET}")
+                else:
+                    colored_words.append(f"{THEME.fg}{word}{RESET}")
+            except (OSError, ValueError):
+                colored_words.append(f"{THEME.fg}{word}{RESET}")
+        result.append("  ".join(colored_words))
+    return "\n".join(result) + "\n"
+
+
+def colorize_output(command, output, cwd):
+    
+    base_cmd = os.path.basename(command).lower()
+    if base_cmd in LS_COMMANDS:
+        return colorize_ls_output(output, cwd)
+    else:
+        return f"{THEME.fg}{output}{RESET}"
 
 
 def main():
+    
     builtin = ["echo", "exit", "type", "pwd", "cd", "history"]
     
     while True:
@@ -42,7 +81,8 @@ def main():
             if os.path.isdir(os.getcwd() + "/" + autocomplete_array[i]):
                 autocomplete_array[i] += "/"
         # print(autocomplete_array)
-        prompt = parser(autocomplete_array, "$ ")
+        prompt_symbol = colored_text("$ ", BOLD + THEME.green)
+        prompt = parser(autocomplete_array, prompt_symbol)
         config.prompt_history.append(prompt)
         config.current_line = len(config.prompt_history)
         prompt_parts = shlex.split(prompt, posix=POSIX)
@@ -76,11 +116,15 @@ def main():
             else:
                 multi_pipelining(prompt)
         elif path := shutil.which(command):
-            result = subprocess.run(prompt_parts, text=True, check=True, executable=path)
+            result = subprocess.run(prompt_parts, text=True, capture_output=True, executable=path)
+            if result.stdout:
+                sys.stdout.write(colorize_output(command, result.stdout, curr_dir))
+            if result.stderr:
+                sys.stderr.write(THEME.red + result.stderr + RESET)
         elif command in builtin:
             builtInCommands[command](args)
         else:
-            print(f"{command}: command not found")
+            print(error_text(f"{command}: command not found"))
 
 
 if __name__ == "__main__":

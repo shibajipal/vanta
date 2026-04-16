@@ -6,6 +6,7 @@ import sys
 import shutil
 from config import HISTFILE, HOME, old_lines, builtin
 import config
+from colors import error_text, info_text, dir_text, success_text, command_text, path_text, colored_text, THEME, BOLD, RESET
 
 def handle_exit():
     if HISTFILE:
@@ -16,11 +17,11 @@ def handle_exit():
         
 def typeBuiltIn(cmd):
     if cmd in builtInCommands:
-        print(f"{cmd} is a shell builtin")
+        print(command_text(cmd) + info_text(" is a shell builtin"))
     elif path := shutil.which(cmd):
-        print(f"{cmd} is {path}")
+        print(command_text(cmd) + info_text(" is ") + path_text(path))
     else:
-        print(f"{cmd}: not found")
+        print(error_text(f"{cmd}: not found"))
         
 
 def cdBuiltIn(cmd):
@@ -29,7 +30,7 @@ def cdBuiltIn(cmd):
     elif os.path.isdir(cmd):
         os.chdir(cmd)
     else:
-        print(f"{cmd}: No such file or directory")
+        print(error_text(f"{cmd}: No such file or directory"))
         
 
 def history_builtin(args):
@@ -64,15 +65,16 @@ def history_builtin(args):
         start = 0
     
     for i, prompt in enumerate(config.prompt_history[start:]):
-        print("    " + str(i + start + 1) + "  " + prompt)
+        index_text = colored_text(str(i + start + 1).rjust(4), THEME.dark_gray)
+        print(index_text + colored_text("  ", THEME.dark_gray) + colored_text(prompt, THEME.fg))
     
     return
 
 builtInCommands = {
     "exit" : lambda x : handle_exit(),
-    "pwd" : lambda x : print(os.getcwd()),
+    "pwd" : lambda x : print(dir_text(os.getcwd())),
     "cd" : lambda x: cdBuiltIn(" ".join(x)),
     "type" : lambda x: typeBuiltIn(" ".join(x)),
-    "echo" : lambda x: print(" ".join(x)),
+    "echo" : lambda x: print(colored_text(" ".join(x), THEME.fg)),
     "history" : lambda x : history_builtin(x)
 }

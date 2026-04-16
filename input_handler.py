@@ -7,6 +7,7 @@ import sys
 import os
 from config import getch
 import config
+from colors import colored_text, THEME, RESET, BOLD
 
 
 def longest_substring(str1, str2):
@@ -16,6 +17,35 @@ def longest_substring(str1, str2):
             break
         answer += 1
     return answer
+
+
+def _write_colored(text, color):
+    sys.stdout.write(f"{color}{text}{RESET}")
+    sys.stdout.flush()
+
+
+def _color_completion(name, is_dir):
+    if is_dir:
+        return THEME.blue  # directories in blue
+    else:
+        return THEME.green  # files in green
+
+
+def _color_match(match):
+    # if it ends with / it's a directory
+    if match.endswith("/"):
+        return colored_text(match, BOLD + THEME.blue)
+    else:
+        return colored_text(match, THEME.green)
+
+
+def _write_completion(completion_text, is_dir):
+    color = _color_completion(completion_text, is_dir)
+    if is_dir:
+        _write_colored(completion_text + "/", color)
+    else:
+        _write_colored(completion_text + " ", color)
+
 
 def parser(autocomplete_array, start="$ "):
     sys.stdout.write(start)
@@ -27,11 +57,11 @@ def parser(autocomplete_array, start="$ "):
         ch = getch()
         
         if ch in ("\r", "\n"):
-            sys.stdout.write("\n")
+            sys.stdout.write(RESET + "\n")
             return buffer
         
         elif ch == "\x03":
-            sys.stdout.write("\n")
+            sys.stdout.write(RESET + "\n")
             raise KeyboardInterrupt
         
         elif ch in ("\x08", "\x7f"):
@@ -59,8 +89,8 @@ def parser(autocomplete_array, start="$ "):
             chars_to_delete = len(buffer)
             sys.stdout.write("\b" * chars_to_delete + " " * chars_to_delete + "\b" * chars_to_delete)
             buffer = config.prompt_history[config.current_line]
-            sys.stdout.write(buffer)
-            sys.stdout.flush()
+            # History recall in yellow
+            _write_colored(buffer, THEME.yellow)
         elif ch == "\t":
             tab_counter += 1
             if " " in buffer:
@@ -72,11 +102,10 @@ def parser(autocomplete_array, start="$ "):
                         buffer += completion
                         if os.path.isdir(os.getcwd() + "/" + completion):
                             buffer += "/"
-                            sys.stdout.write(completion + "/")
+                            _write_colored(completion + "/", THEME.blue)
                         else:
                             buffer += " "
-                            sys.stdout.write(completion + " ")
-                        sys.stdout.flush()
+                            _write_colored(completion + " ", THEME.green)
                         tab_counter = 0
                     tab_counter = 0
                     continue
@@ -91,15 +120,16 @@ def parser(autocomplete_array, start="$ "):
                     if len(local_completion_matches) == 1:
                         completion = local_completion_matches[0][len(written):]
                         buffer += completion
-                        if os.path.isdir(os.getcwd() + "/" + path + "/" + written + completion):
-                            
-                            
+                        full_name = written + completion
+                        full_path = os.getcwd() + "/" + path + "/" + full_name
+                        # Erase the typed part, rewrite full name in color
+                        sys.stdout.write("\b" * len(written) + " " * len(written) + "\b" * len(written))
+                        if os.path.isdir(full_path):
                             buffer += "/"
-                            sys.stdout.write(completion + "/")
+                            _write_colored(full_name + "/", THEME.blue)
                         else:
                             buffer += " "
-                            sys.stdout.write(completion + " ")
-                        sys.stdout.flush()
+                            _write_colored(full_name + " ", THEME.green)
                         tab_counter = 0
                 completion_matches = [x for x in autocomplete_array if x.startswith(text)]
                 completion_matches = sorted(completion_matches, key=len)
@@ -107,13 +137,14 @@ def parser(autocomplete_array, start="$ "):
                 if len(completion_matches) == 1:
                     completion = completion_matches[0][len(text):]
                     buffer += completion
-                    if os.path.isdir(os.getcwd() + "/" + text + completion):
+                    full_name = text + completion
+                    sys.stdout.write("\b" * len(text) + " " * len(text) + "\b" * len(text))
+                    if os.path.isdir(os.getcwd() + "/" + full_name):
                         # buffer += "/"
-                        sys.stdout.write(completion)
+                        _write_colored(full_name, THEME.blue)
                     else:
                         buffer += " "
-                        sys.stdout.write(completion + " ")
-                    sys.stdout.flush()
+                        _write_colored(full_name + " ", THEME.green)
                     tab_counter = 0
                     
                 elif len(completion_matches) > 1:
@@ -128,16 +159,16 @@ def parser(autocomplete_array, start="$ "):
                             completion = completion_matches[0][len(text):length]
                             buffer += completion
                             
-                            sys.stdout.write(completion)
-                            sys.stdout.flush()
+                            _write_colored(completion, THEME.dark_yellow)
                             tab_counter = 0
                         else:
                             sys.stdout.write("\x07")
                             sys.stdout.flush()
                             # print("\n completion is ", completion)
                     elif tab_counter == 2:
-                        sys.stdout.write("\n" + "  ".join(sorted(completion_matches)) + "\n")
-                        sys.stdout.write(start + buffer)
+                        colored_matches = [_color_match(m) for m in sorted(completion_matches)]
+                        sys.stdout.write("\n" + "  ".join(colored_matches) + "\n")
+                        sys.stdout.write(start + THEME.fg + buffer + RESET)
                         sys.stdout.flush()
                         tab_counter = 0
                 elif len(completion_matches) == 0:
@@ -148,14 +179,16 @@ def parser(autocomplete_array, start="$ "):
                 completion_matches = sorted(completion_matches, key=len)
                 
                 if len(completion_matches) == 1:
+                    typed_part = buffer
                     completion = completion_matches[0][len(buffer):]
                     buffer += completion
-                    if os.path.isdir(os.getcwd() + "/" + buffer):
-                        sys.stdout.write(completion)
+                    full_name = buffer
+                    sys.stdout.write("\b" * len(typed_part) + " " * len(typed_part) + "\b" * len(typed_part))
+                    if os.path.isdir(os.getcwd() + "/" + full_name):
+                        _write_colored(full_name, THEME.blue)
                     else:
                         buffer += " "
-                        sys.stdout.write(completion + " ")
-                    sys.stdout.flush()
+                        _write_colored(full_name + " ", THEME.green)
                     
                     tab_counter = 0
                 elif len(completion_matches) > 1:
@@ -168,15 +201,15 @@ def parser(autocomplete_array, start="$ "):
                             completion = completion_matches[0][len(buffer):length]
                             buffer += completion
                             
-                            sys.stdout.write(completion)
-                            sys.stdout.flush()
+                            _write_colored(completion, THEME.dark_yellow)
                             tab_counter = 0
                         else:
                             sys.stdout.write("\x07")
                             sys.stdout.flush()
                     elif tab_counter == 2:
-                        sys.stdout.write("\n" + "  ".join(sorted(completion_matches)) + "\n")
-                        sys.stdout.write(start + buffer)
+                        colored_matches = [_color_match(m) for m in sorted(completion_matches)]
+                        sys.stdout.write("\n" + "  ".join(colored_matches) + "\n")
+                        sys.stdout.write(start + THEME.fg + buffer + RESET)
                         sys.stdout.flush()
                         tab_counter = 0
                 elif len(completion_matches) == 0:
@@ -184,6 +217,6 @@ def parser(autocomplete_array, start="$ "):
                     sys.stdout.flush()
         elif ch.isprintable():
             buffer += ch
-            sys.stdout.write(ch)
-            sys.stdout.flush()
+            # User typed text in foreground color
+            _write_colored(ch, THEME.fg)
             tab_counter = 0
