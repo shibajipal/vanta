@@ -54,9 +54,77 @@ def colorize_output(command, output, cwd):
         return f"{THEME.fg}{output}{RESET}"
 
 
+def display_intro():
+    """Display the Vanta shell intro banner"""
+    import time
+    import platform
+    import datetime
+    import random
+
+    # color aliases
+    P  = THEME.purple;    DP  = THEME.dark_purple
+    C  = THEME.cyan;      DC  = THEME.dark_cyan
+    G  = THEME.green;     DG  = THEME.dark_green
+    Y  = THEME.yellow;    DY  = THEME.dark_yellow
+    B  = THEME.blue;      DB  = THEME.dark_blue
+    R  = THEME.red;       DR  = THEME.dark_red
+    GR = THEME.gray;      DGR = THEME.dark_gray
+    FG = THEME.fg;        RST = RESET;  BLD = BOLD
+    DIM = "\033[2m"
+
+    # grabbing da system info
+    now     = datetime.datetime.now()
+    user    = os.environ.get("USERNAME", os.environ.get("USER", "operator"))
+    host    = platform.node()
+    py_ver  = platform.python_version()
+    os_name = platform.system()
+    arch    = platform.machine()
+
+
+
+    banner = ["",
+
+        f"         {BLD}{Y}██╗   ██╗  █████╗  ███╗   ██╗ ████████╗  █████╗{RST}",
+        f"         {BLD}{Y}██║   ██║ ██╔══██╗ ████╗  ██║ ╚══██╔══╝ ██╔══██╗{RST}",
+        f"         {BLD}{DY}██║   ██║ ███████║ ██╔██╗ ██║    ██║    ███████║{RST}",
+        f"         {BLD}{DY}╚██╗ ██╔╝ ██╔══██║ ██║╚██╗██║    ██║    ██╔══██║{RST}",
+        f"         {BLD}{R} ╚████╔╝  ██║  ██║ ██║ ╚████║    ██║    ██║  ██║{RST}",
+        f"         {DR}  ╚═══╝   ╚═╝  ╚═╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝  ╚═╝{RST}",
+        f"         {DIM}{DGR}{'▀' * 51}{RST}",
+        "",
+        f"      {P}▸{RST} {BLD}{FG}{user}{RST}{DGR}@{RST}{FG}{host}{RST}",
+        f"      {DG}▸{RST} {GR}os{RST} {FG}{os_name}{RST}  {DGR}│{RST}  {GR}arch{RST} {FG}{arch}{RST}  {DGR}│{RST}  {GR}python{RST} {FG}{py_ver}{RST}",
+        f"      {DG}▸{RST} {GR}time{RST} {FG}{now.strftime('%H:%M:%S')}{RST}  {DGR}│{RST}  {GR}date{RST} {FG}{now.strftime('%Y-%m-%d')}{RST}",
+        "",
+        "",
+    ]
+
+    for line in banner:
+        print(line)
+        sys.stdout.flush()
+        time.sleep(0.03)
+
+    #loading bar
+    bar_w = 44
+    sys.stdout.write(f"\n      {GR}╠{RST}")
+    sys.stdout.flush()
+    for i in range(bar_w):
+        ch  = "█" if random.random() > 0.12 else "▓"
+        clr = DY if i < bar_w * 0.35 else (Y if i < bar_w * 0.7 else G)
+        sys.stdout.write(f"{clr}{ch}{RST}")
+        sys.stdout.flush()
+        time.sleep(0.03 + random.random() * 0.008)
+    print(f"{GR}╣{RST} {BLD}{G}done{RST}")
+    
+    print(f"\n      {BLD}{C}⚡ VANTA{RST} {FG}ready.{RST} {DGR}type {BLD}{FG}exit{RST}{DGR} to leave the shell.{RST}")
+    print()
+
+
 def main():
     
     builtin = ["echo", "exit", "type", "pwd", "cd", "history"]
+    
+    display_intro()
     
     while True:
         curr_dir = os.getcwd()
