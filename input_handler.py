@@ -159,7 +159,8 @@ def parser(autocomplete_array, start="$ "):
                             completion = completion_matches[0][len(text):length]
                             buffer += completion
                             
-                            _write_colored(completion, THEME.dark_yellow)
+                            sys.stdout.write(completion)
+                            sys.stdout.flush()
                             tab_counter = 0
                         else:
                             sys.stdout.write("\x07")
@@ -201,7 +202,8 @@ def parser(autocomplete_array, start="$ "):
                             completion = completion_matches[0][len(buffer):length]
                             buffer += completion
                             
-                            _write_colored(completion, THEME.dark_yellow)
+                            sys.stdout.write(completion)
+                            sys.stdout.flush()
                             tab_counter = 0
                         else:
                             sys.stdout.write("\x07")
